@@ -32,9 +32,14 @@ AM_INIT_AUTOMAKE([-Wall std-options subdir-objects])
 # ----------------------------------------------------------------------
 
 case "$host_os" in
-linux*|gnu*)
+linux*)
    my_htop_platform=linux
    AC_DEFINE([HTOP_LINUX], [], [Building for Linux.])
+   ;;
+gnu*)
+   my_htop_platform=linux
+   AC_DEFINE([HTOP_LINUX], [], [Building for Linux.])
+   AC_DEFINE([HTOP_HURD], [], [Building for GNU/Hurd.])
    ;;
 freebsd*|kfreebsd*)
    my_htop_platform=freebsd

@@ -58,6 +58,16 @@ in the source distribution for its full text.
 #include <sys/sysmacros.h>
 #endif
 
+/* On GNU/Hurd, opening a translator-backed directory such as /proc with
+ * O_NOFOLLOW returns a handle to the underlying node, whose readdir() only
+ * yields "." and "..".  Keep O_NOFOLLOW elsewhere (as protection against
+ * symlink attacks), but do not use it when scanning /proc. */
+#ifdef HTOP_HURD
+#define HTOP_PROC_NOFOLLOW 0
+#else
+#define HTOP_PROC_NOFOLLOW O_NOFOLLOW
+#endif
+
 /* Not exposed yet. Defined at include/linux/sched.h */
 #ifndef PF_KTHREAD
 #define PF_KTHREAD 0x00200000
@@ -1493,7 +1503,7 @@ static bool LinuxProcessTable_recurseProcTree(LinuxProcessTable* this, openat_ar
    pt->runningTasks = lhost->runningTasks;
 
 #ifdef HAVE_OPENAT
-   int dirFd = openat(parentFd, dirname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+   int dirFd = openat(parentFd, dirname, O_RDONLY | O_DIRECTORY | HTOP_PROC_NOFOLLOW);
    if (dirFd < 0)
       return false;
    DIR* dir = fdopendir(dirFd);
@@ -1539,7 +1549,7 @@ static bool LinuxProcessTable_recurseProcTree(LinuxProcessTable* this, openat_ar
          continue;
 
 #ifdef HAVE_OPENAT
-      int procFd = openat(dirFd, entry->d_name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+      int procFd = openat(dirFd, entry->d_name, O_RDONLY | O_DIRECTORY | HTOP_PROC_NOFOLLOW);
       if (procFd < 0)
          continue;
 #else
