@@ -220,6 +220,9 @@ m4_version_prereq(
 
 AC_CHECK_HEADERS([execinfo.h])
 
+# Linux capability ABI, used for a raw capget() call without libcap
+AC_CHECK_HEADERS([linux/capability.h])
+
 if test "$my_htop_platform" = darwin; then
    AC_CHECK_HEADERS([mach/mach_time.h])
    AC_CHECK_TYPES([thread_extended_info_data_t], [], [], [[#include <mach/thread_info.h>]])

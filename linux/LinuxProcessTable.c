@@ -24,7 +24,9 @@ in the source distribution for its full text.
 #include <string.h>
 #include <syscall.h>
 #include <unistd.h>
+#ifdef HAVE_LINUX_CAPABILITY_H
 #include <linux/capability.h> // raw syscall, no libcap  // IWYU pragma: keep // IWYU pragma: no_include <sys/capability.h>
+#endif
 #include <sys/stat.h>
 
 #include "GPUMeter.h"
@@ -1701,6 +1703,7 @@ static bool LinuxProcessTable_recurseProcTree(LinuxProcessTable* this, openat_ar
        * each other.
        */
 
+#ifdef HAVE_LINUX_CAPABILITY_H
       /* Gather permitted capabilities (thread-specific data) for non-root process. */
       if (proc->st_uid != 0 && proc->elevated_priv != TRI_OFF) {
          struct __user_cap_header_struct header = { .version = _LINUX_CAPABILITY_VERSION_3, .pid = Process_getPid(proc) };
@@ -1713,6 +1716,7 @@ static bool LinuxProcessTable_recurseProcTree(LinuxProcessTable* this, openat_ar
             proc->elevated_priv = TRI_OFF;
          }
       }
+#endif
 
       if (ss->flags & PROCESS_FLAG_LINUX_CGROUP)
          LinuxProcessTable_readCGroupFile(lp, procFd);
