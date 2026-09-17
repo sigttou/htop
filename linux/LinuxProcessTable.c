@@ -343,6 +343,10 @@ static bool LinuxProcessTable_readStatFile(LinuxProcess* lp, openat_arg_t procFd
       xSnprintf(path, sizeof(path), "task/%"PRIi32"/stat", (int32_t)Process_getPid(process));
    }
    ssize_t r = Compat_readfileat(procFd, path, buf, sizeof(buf));
+   if (r < 0 && scanMainThread) {
+      /* No /proc/<pid>/task (e.g. GNU/Hurd): fall back to the process stat. */
+      r = Compat_readfileat(procFd, "stat", buf, sizeof(buf));
+   }
    if (r < 0)
       return false;
 
