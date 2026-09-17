@@ -41,6 +41,39 @@ in the source distribution for its full text.
 #define O_PATH         010000000 // declare for ancient glibc versions
 #endif
 
+/* Fallback for systems without sysfs (e.g. GNU/Hurd): count the per-CPU
+ * lines in /proc/stat, the same source the CPU meters use. */
+static void LinuxMachine_updateCPUcountFromProcStat(LinuxMachine* this) {
+   Machine* super = &this->super;
+
+   FILE* statfile = fopen(PROCSTATFILE, "r");
+   if (!statfile)
+      return;
+
+   unsigned int max = 0;
+   char line[PROC_LINE_LENGTH + 1];
+   while (fgets(line, sizeof(line), statfile)) {
+      if (!String_startsWith(line, "cpu"))
+         break;
+      if (line[3] < '0' || line[3] > '9')
+         continue;
+      unsigned int id = strtoul(line + 3, NULL, 10);
+      if (id + 1 > max)
+         max = id + 1;
+   }
+   fclose(statfile);
+
+   if (max < 1)
+      return;
+
+   this->cpuData = xReallocArrayZero(this->cpuData, super->existingCPUs ? (super->existingCPUs + 1) : 0, max + /* aggregate */ 1, sizeof(CPUData));
+   this->cpuData[0].online = true; /* average is always "online" */
+   for (unsigned int i = 1; i <= max; i++)
+      this->cpuData[i].online = true;
+   super->activeCPUs = max;
+   super->existingCPUs = max;
+}
+
 /* Similar to get_nprocs_conf(3) / _SC_NPROCESSORS_CONF
  * https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/getsysstats.c;hb=HEAD
  */
@@ -58,8 +91,10 @@ static void LinuxMachine_updateCPUcount(LinuxMachine* this) {
    }
 
    DIR* dir = opendir("/sys/devices/system/cpu");
-   if (!dir)
+   if (!dir) {
+      LinuxMachine_updateCPUcountFromProcStat(this);
       return;
+   }
 
    unsigned int currExisting = super->existingCPUs;
    unsigned int maxSeen = 0;
